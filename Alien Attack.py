@@ -17,8 +17,12 @@ projectiles = []  # List to store projectile positions (x, y)
 missed_fire = 0
 pause = False
 over = False
+left_pressed = False
+right_pressed = False
 score = 0
 count = 0
+fire_rate_timer = 0
+
 spaceship_health = 100
 # Power-up agent variables
 power_up_agent = [random.randint(100, 400), 500]  # Initial position
@@ -187,13 +191,12 @@ def update_life_agents():
     dx = heart[0] - spaceshipX
     dy = heart[1] - (spaceshipY + 15)  # Adjust for spaceship's middle position
     distance = (dx ** 2 + dy ** 2) ** 0.5
-    if distance < 20:# Collision detected
-        if spaceship_health<=99:
-            spaceship_health += 25  # Increase health
-            if spaceship_health > 100:
-                spaceship_health=100
-            print(f"Health increased! Current health: {spaceship_health}")
-            heart = [random.randint(100, 400), 500]  # Reset position
+    if distance < 20:  # Collision detected
+        spaceship_health += 25  # Increase health
+        if spaceship_health > 100:  # Clamp health at a maximum of 100
+            spaceship_health = 100
+        print(f"Health increased! Current health: {spaceship_health}")
+        heart = [random.randint(100, 400), 500]  # Reset position
 
     # Move the Skull downward
     skull[1] -= 2  # Adjust speed as needed
@@ -206,14 +209,16 @@ def update_life_agents():
     distance = (dx ** 2 + dy ** 2) ** 0.5
     if distance < 20:  # Collision detected
         spaceship_health -= 34  # Decrease health
-        if spaceship_health <=0:
+        if spaceship_health <= 0:
+            spaceship_health = 0  # Clamp health at 0
             over = True
-            print("Gamev over")
-            print(f"Health decreased! Current health: {spaceship_health}")
+            print("Game Over!")
         else:
-
             print(f"Health decreased! Current health: {spaceship_health}")
-            skull = [random.randint(100, 400), 600]  # Reset position
+
+        # Reset the skull's position regardless of the health status
+        skull = [random.randint(100, 400), 600]
+
 
 # Draw the bomb
 
@@ -250,8 +255,8 @@ def update_bomb():
         spaceship_health -= 100
         if spaceship_health <= 0:
             over = True
+            print("GG | Current Health: 0")
             print("Game Over!")
-            clear_screen()
 
 
 
@@ -331,7 +336,8 @@ def update_boost_up_agent():
 
 # Draw missiles (shorter rectangle with a triangular top)
 def draw_missiles():
-    global power_up_active
+    global power_up_active, score
+
     for missile in projectiles[:]:
         # Change missile color if power-up is active
         if power_up_active:
@@ -348,17 +354,43 @@ def draw_missiles():
             x_offset = y - (missile[1] + 30)
             midpoint_line(missile[0] - 5 + x_offset, y, missile[0] + 5 - x_offset, y)
 
-        # Update missile position
-        missile[1] += 3  # Central missile moves upward
+        # Collision detection (always active)
+        for circle in falling_circles[:]:
+            dx = missile[0] - circle[0]
+            dy = missile[1] - circle[1]
+            distance = (dx ** 2 + dy ** 2) ** 0.5
+            if distance < 15:  # Collision with falling circle
+                score += 1
+                print(f"Score: {score}")
+                falling_circles.remove(circle)
+                falling_circles.append([random.randint(100, 400), 480])
+                projectiles.remove(missile)
+                break
 
-        if missile[2] == 1:  # Top-right diagonal
-            missile[0] += 1  # Adjust X-coordinate to move right
-        elif missile[2] == -1:  # Top-left diagonal
-            missile[0] -= 1  # Adjust X-coordinate to move left
+        # Collision detection with the special circle
+        dx = missile[0] - special_circle[0]
+        dy = missile[1] - special_circle[1]
+        distance = (dx ** 2 + dy ** 2) ** 0.5
+        if distance < special_circle[2] + 5:  # Collision with special circle
+            score += 3
+            print(f"Score: {score}")
+            special_circle[0] = random.randint(100, 400)
+            special_circle[1] = 480
+            special_circle[2] = 10
+            projectiles.remove(missile)
+
+        # Only move missiles if the game is not paused
+        if not pause:
+            missile[1] += 3  # Central missile moves upward
+            if missile[2] == 1:  # Top-right diagonal
+                missile[0] += 1  # Adjust X-coordinate to move right
+            elif missile[2] == -1:  # Top-left diagonal
+                missile[0] -= 1  # Adjust X-coordinate to move left
 
         # Remove missile if it goes out of bounds
         if missile[1] > 500 or missile[0] < 0 or missile[0] > 500:
             projectiles.remove(missile)
+
 
 
 # Draw falling circles
@@ -421,96 +453,378 @@ def draw_special_circle():
         midpoint_line(x + radius + 3 - i, y - radius - 11, x + radius + 7 - i, y - radius - 11)  # Right foot
 
 
-# Animation logic
+
+
+
+
+
+def draw_text(x, y, text, color=(0.5, 0.5, 1.0)):
+    glColor3f(*color)  # Set text color
+    glRasterPos2f(x, y)  # Set position
+    for char in text:
+        glutBitmapCharacter(GLUT_BITMAP_9_BY_15, ord(char))  # Use smaller font
+
+
+
+
+
 # Animation logic
 def animation():
-    global falling_circles, projectiles, special_circle, radius_direction, score, missed_fire
+    global spaceshipX, falling_circles, special_circle, radius_direction, score, missed_fire
 
-    if not pause and not over:
-        # Move falling circles downward
-        for circle in falling_circles:
-            circle[1] -= 1
-            if circle[1] < 0:
-                circle[0] = random.randint(100, 400)
-                circle[1] = 480
+    if over or pause:  # Stop all animations when paused or game over
+        return
 
-        # Move special circle downward and adjust radius
-        special_circle[1] -= 1
-        special_circle[2] += radius_direction
-        if special_circle[2] > 20 or special_circle[2] < 5:
-            radius_direction *= -1
-        if special_circle[1] < 0:
-            special_circle[0] = random.randint(100, 400)
-            special_circle[1] = 480
+    # Handle spaceship movement
+    if left_pressed and spaceshipX > 20:
+        spaceshipX -= 3
+    if right_pressed and spaceshipX < 480:
+        spaceshipX += 3
 
-        # Move missiles upward
-        for missile in projectiles[:]:
-            missile[1] += 3
-            if missile[1] > 500:
-                projectiles.remove(missile)
+    # Move falling circles downward
+    for circle in falling_circles:
+        circle[1] -= 1
+        if circle[1] < 0:
+            circle[0] = random.randint(100, 400)
+            circle[1] = 480
+
+    # Move special circle downward and adjust radius
+    special_circle[1] -= 1
+    special_circle[2] += radius_direction
+    if special_circle[2] > 20 or special_circle[2] < 5:
+        radius_direction *= -1
+    if special_circle[1] < 0:
+        special_circle[0] = random.randint(100, 400)
+        special_circle[1] = 480
+
+    # Update other game elements
+    update_bomb()
+    update_power_up_agent()
+    update_life_agents()
+    update_boost_up_agent()
+
+    glutPostRedisplay()
 
 
-            # Check collisions with falling circles
-            for circle in falling_circles[:]:
-                dx = missile[0] - circle[0]
-                dy = missile[1] - circle[1]
-                distance = (dx ** 2 + dy ** 2) ** 0.5
-                if distance < 15:
-                    score += 1
-                    print(f"Score: {score}")
-                    falling_circles.remove(circle)
-                    falling_circles.append([random.randint(100, 400), 480])
-                    if not power_up_active:
-                        projectiles.remove(missile)
-                    break
 
-            # Check for collision with special circle
-            dx = missile[0] - special_circle[0]
-            dy = missile[1] - special_circle[1]
-            distance = (dx ** 2 + dy ** 2) ** 0.5
-            if distance < special_circle[2] + 5:
-                score += 3
-                print(f"Score: {score}")
-                special_circle[0] = random.randint(100, 400)
-                special_circle[1] = 480
-                special_circle[2] = 10
-                if not power_up_active:
-                    projectiles.remove(missile)
 
-        # Update bomb position and check collision
-        update_bomb()
 
-        # Update power-up agent
-        update_power_up_agent()
 
-        # Update life agents
-        update_life_agents()
 
-        # Update Boost-Up Agent
-        update_boost_up_agent()
 
-        glutPostRedisplay()
+
+
+def draw_restart_button():
+    glColor3f(0.8, 0.0, 0.0)  # Red button color
+    glBegin(GL_QUADS)
+    glVertex2f(220, 480)  # Top left corner
+    glVertex2f(280, 480)  # Top right corner
+    glVertex2f(280, 450)  # Bottom right corner
+    glVertex2f(220, 450)  # Bottom left corner
+    glEnd()
+    glColor3f(1.0, 1.0, 1.0)  # White text color
+    glRasterPos2f(230, 460)
+    for char in "RST":
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, ord(char))
+
+
+def mouse_listener(button, state, x, y):
+    global spaceshipX, spaceshipY, special_circle, falling_circles, projectiles, power_up_agent, \
+        power_up_active, boost_up_agent, boost_up_active, bomb, heart, skull, spaceship_health, score, over
+
+    if button == GLUT_LEFT_BUTTON and state == GLUT_DOWN:
+        # Map screen coordinates to OpenGL coordinates
+        clicked_x = x
+        clicked_y = 500 - y
+
+        # Check if Restart button is clicked
+        if 220 <= clicked_x <= 280 and 450 <= clicked_y <= 480:
+            # Reset game variables
+            spaceshipX = 250
+            spaceshipY = 50
+            special_circle = [random.randint(100, 400), 720, 10]
+            radius_direction = 1
+            falling_circles = [[random.randint(100, 400), 480],
+                               [random.randint(100, 400), 600]]
+            projectiles.clear()
+            power_up_agent = [random.randint(100, 400), 500]
+            power_up_active = False
+            boost_up_agent = [random.randint(100, 400), 700]
+            boost_up_active = False
+            bomb = [random.randint(100, 400), 500]
+            heart = [random.randint(100, 400), 500]
+            skull = [random.randint(100, 400), 600]
+            spaceship_health = 100
+            score = 0
+            over = False
+            print("Game Restarted!")
+
+
+
+
 
 
 
 
 
 def KeyboardListener(key, x, y):
-    global spaceshipX, projectiles, boost_up_active
-    if key == b'd' and spaceshipX < 480:
-        spaceshipX += 10
-    elif key == b'a' and spaceshipX > 20:
-        spaceshipX -= 10
-    elif key == b' ':
-        if boost_up_active:
-            # Fire three missiles when boost-up is active
-            projectiles.append([spaceshipX, spaceshipY + 30, 0])  # Central missile
-            projectiles.append([spaceshipX, spaceshipY + 30, 1])  # Top-right diagonal missile
-            projectiles.append([spaceshipX, spaceshipY + 30, -1]) # Top-left diagonal missile
+    global spaceshipX, left_pressed, right_pressed, projectiles, boost_up_active, over, pause, fire_rate_timer
+
+    if over:  # Disable inputs if the game is over
+        return
+
+    if key == b'f':  # Toggle pause
+        pause = not pause
+        if pause:
+            print("Game Paused")
         else:
-            # Fire a single missile
-            projectiles.append([spaceshipX, spaceshipY + 30, 0])  # Central missile only
-    glutPostRedisplay()
+            print("Game Resumed")
+        return  # Exit after handling pause toggle
+
+    if key == b'a':  # Move left
+        left_pressed = True
+    elif key == b'd':  # Move right
+        right_pressed = True
+    elif key == b' ':  # Fire bullets
+        if not pause and glutGet(GLUT_ELAPSED_TIME) - fire_rate_timer > 200:  # Fire every 200ms
+            fire_rate_timer = glutGet(GLUT_ELAPSED_TIME)
+            if boost_up_active:
+                projectiles.extend([
+                    [spaceshipX, spaceshipY + 30, 0],  # Central missile
+                    [spaceshipX, spaceshipY + 30, 1],  # Top-right diagonal missile
+                    [spaceshipX, spaceshipY + 30, -1],  # Top-left diagonal missile
+                ])
+            else:
+                projectiles.append([spaceshipX, spaceshipY + 30, 0])  # Central missile only
+
+
+    #glutPostRedisplay()
+
+
+
+def KeyboardUpListener(key, x, y):
+    global left_pressed, right_pressed
+
+    if key == b'a':  # Stop moving left
+        left_pressed = False
+    elif key == b'd':  # Stop moving right
+        right_pressed = False
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def drawpoints(x,y,size = 2):
+    glPointSize(size)
+    glBegin(GL_POINTS)
+    glVertex2f(x,y)
+    glEnd()
+
+
+def FindZone(x0,y0,x1,y1):
+    dx = x1-x0
+    dy = y1-y0
+    zone = -1
+
+    if abs(dx)>abs(dy):
+        if dx>0 and dy>0:
+            zone = 0
+        elif dx<0 and dy>0:
+            zone=3
+        elif dx<0 and dy<0:
+            zone=4
+        else:
+            zone=7
+    else:
+        if dx>0 and dy>0:
+            zone=1
+        elif dx<0 and dy>0:
+            zone=2
+        elif dx<0 and dy<0:
+            zone=5 
+        else:
+            zone=6
+    return zone
+
+
+def convert_to_zone0(original_zone,x,y) :
+
+
+    if (original_zone == 0) :
+        return x,y
+    elif (original_zone == 1) :
+        return y,x
+    elif (original_zone == 2) :
+        return -y,x
+    elif (original_zone == 3) :
+        return -x,y
+    elif (original_zone == 4) :
+        return -x,-y
+    elif (original_zone == 5) :
+        return -y,-x
+    elif (original_zone == 6) :
+        return -y,x
+    elif (original_zone == 7) :
+        return x,-y
+    
+
+def convert_to_originalzone(originalzone,x,y):
+    if originalzone == 0:
+        return x,y
+    elif originalzone == 1:
+        return y,x
+    elif originalzone == 2:
+        return -y,-x
+    elif originalzone == 3:
+        return -x,y
+    elif originalzone == 4:
+        return -x,-y
+    elif originalzone == 5:
+        return -y,-x
+    elif originalzone == 6:
+        return y,-x
+    elif originalzone == 7:
+        return x,-y
+
+
+def MidpointLine(zone,x0,y0,x1,y1):
+    dx = x1-x0
+    dy = y1-y0
+    d = 2*dy-dx
+    E = 2*dy
+    NE = 2*(dy-dx)
+    x = x0
+    y = y0
+    while x<x1:
+        original_x,original_y = convert_to_originalzone(zone,x,y)
+        drawpoints(original_x,original_y)
+        if d<=0:
+            d = d+E
+            x = x+1
+        else:
+            d = d+NE
+            x = x+1
+            y = y+1
+
+
+def PlotCirclePoints(xc, yc, x, y):
+    drawpoints(xc + x, yc + y)  
+    drawpoints(xc - x, yc + y) 
+    drawpoints(xc + x, yc - y)  
+    drawpoints(xc - x, yc - y)  
+    drawpoints(xc + y, yc + x)  
+    drawpoints(xc - y, yc + x)  
+    drawpoints(xc + y, yc - x)  
+    drawpoints(xc - y, yc - x) 
+
+
+def MidpointCircle(r,xc,yc):
+    d = 1-r
+    x = 0
+    y = r
+    PlotCirclePoints(xc,yc,x,y)
+    while x<y:
+        if d<0:
+            d = d+2*x+3
+        else:
+            d = d+2*x-2*y+5
+            y = int(y-1)
+        x+=1
+        PlotCirclePoints(xc,yc,int(x),int(y))
+
+
+def Eight_way_symmetry(x0,y0,x1,y1):
+    if x0==x1:
+        for y in range(int(min(y0, y1)), int(max(y0, y1)) + 1):
+            drawpoints(x0,y)
+    elif y0==y1:
+        for x in range(int(min(x0, x1)), int(max(x0, x1)) + 1):
+            drawpoints(x,y0)
+    else:
+        zone = FindZone(x0,y0,x1,y1)
+        coverted_x0,converted_y0 = convert_to_zone0(zone,x0,y0)
+        coverted_x1,coverted_y1 = convert_to_zone0(zone,x1,y1)
+        MidpointLine(zone,coverted_x0,converted_y0,coverted_x1,coverted_y1)
+
+
+
+def GameOver():
+    # Calculate the offset for centering
+    center_x = 250  # X-coordinate for the screen center
+    center_y = 250  # Y-coordinate for the screen center
+    text_offset_x = -120  # Adjust to horizontally center the text
+    text_offset_y = -25   # Adjust to vertically center the text
+
+    # G
+    Eight_way_symmetry(center_x + text_offset_x, center_y + text_offset_y + 40, center_x + text_offset_x + 30, center_y + text_offset_y + 40)  
+    Eight_way_symmetry(center_x + text_offset_x, center_y + text_offset_y + 40, center_x + text_offset_x, center_y + text_offset_y)  
+    Eight_way_symmetry(center_x + text_offset_x, center_y + text_offset_y, center_x + text_offset_x + 30, center_y + text_offset_y)  
+    Eight_way_symmetry(center_x + text_offset_x + 30, center_y + text_offset_y, center_x + text_offset_x + 30, center_y + text_offset_y + 20)  
+    Eight_way_symmetry(center_x + text_offset_x + 20, center_y + text_offset_y + 20, center_x + text_offset_x + 30, center_y + text_offset_y + 20)  
+
+    # A
+    Eight_way_symmetry(center_x + text_offset_x + 40, center_y + text_offset_y, center_x + text_offset_x + 50, center_y + text_offset_y + 40)  
+    Eight_way_symmetry(center_x + text_offset_x + 50, center_y + text_offset_y + 40, center_x + text_offset_x + 60, center_y + text_offset_y)  
+    Eight_way_symmetry(center_x + text_offset_x + 45, center_y + text_offset_y + 20, center_x + text_offset_x + 55, center_y + text_offset_y + 20)  
+
+    # M
+    Eight_way_symmetry(center_x + text_offset_x + 70, center_y + text_offset_y, center_x + text_offset_x + 70, center_y + text_offset_y + 40)  
+    Eight_way_symmetry(center_x + text_offset_x + 70, center_y + text_offset_y + 40, center_x + text_offset_x + 80, center_y + text_offset_y + 20)  
+    Eight_way_symmetry(center_x + text_offset_x + 80, center_y + text_offset_y + 20, center_x + text_offset_x + 90, center_y + text_offset_y + 40)  
+    Eight_way_symmetry(center_x + text_offset_x + 90, center_y + text_offset_y + 40, center_x + text_offset_x + 90, center_y + text_offset_y)  
+
+    # E
+    Eight_way_symmetry(center_x + text_offset_x + 100, center_y + text_offset_y, center_x + text_offset_x + 100, center_y + text_offset_y + 40)  
+    Eight_way_symmetry(center_x + text_offset_x + 100, center_y + text_offset_y + 40, center_x + text_offset_x + 110, center_y + text_offset_y + 40)  
+    Eight_way_symmetry(center_x + text_offset_x + 100, center_y + text_offset_y + 20, center_x + text_offset_x + 110, center_y + text_offset_y + 20) 
+    Eight_way_symmetry(center_x + text_offset_x + 100, center_y + text_offset_y, center_x + text_offset_x + 110, center_y + text_offset_y)  
+
+    # O
+    Eight_way_symmetry(center_x + text_offset_x + 120, center_y + text_offset_y, center_x + text_offset_x + 120, center_y + text_offset_y + 40)  
+    Eight_way_symmetry(center_x + text_offset_x + 140, center_y + text_offset_y, center_x + text_offset_x + 140, center_y + text_offset_y + 40)  
+    Eight_way_symmetry(center_x + text_offset_x + 120, center_y + text_offset_y + 40, center_x + text_offset_x + 140, center_y + text_offset_y + 40)  
+    Eight_way_symmetry(center_x + text_offset_x + 120, center_y + text_offset_y, center_x + text_offset_x + 140, center_y + text_offset_y)  
+
+    # V
+    Eight_way_symmetry(center_x + text_offset_x + 150, center_y + text_offset_y + 40, center_x + text_offset_x + 160, center_y + text_offset_y)  
+    Eight_way_symmetry(center_x + text_offset_x + 160, center_y + text_offset_y, center_x + text_offset_x + 170, center_y + text_offset_y + 40)  
+
+    # E
+    Eight_way_symmetry(center_x + text_offset_x + 180, center_y + text_offset_y, center_x + text_offset_x + 180, center_y + text_offset_y + 40)  
+    Eight_way_symmetry(center_x + text_offset_x + 180, center_y + text_offset_y + 40, center_x + text_offset_x + 190, center_y + text_offset_y + 40)  
+    Eight_way_symmetry(center_x + text_offset_x + 180, center_y + text_offset_y + 20, center_x + text_offset_x + 190, center_y + text_offset_y + 20)  
+    Eight_way_symmetry(center_x + text_offset_x + 180, center_y + text_offset_y, center_x + text_offset_x + 190, center_y + text_offset_y)  
+
+    # R
+    Eight_way_symmetry(center_x + text_offset_x + 200, center_y + text_offset_y, center_x + text_offset_x + 200, center_y + text_offset_y + 40)  
+    Eight_way_symmetry(center_x + text_offset_x + 200, center_y + text_offset_y + 40, center_x + text_offset_x + 210, center_y + text_offset_y + 40)  
+    Eight_way_symmetry(center_x + text_offset_x + 210, center_y + text_offset_y + 40, center_x + text_offset_x + 210, center_y + text_offset_y + 20)  
+    Eight_way_symmetry(center_x + text_offset_x + 200, center_y + text_offset_y + 20, center_x + text_offset_x + 210, center_y + text_offset_y + 20)  
+    Eight_way_symmetry(center_x + text_offset_x + 200, center_y + text_offset_y + 20, center_x + text_offset_x + 211, center_y + text_offset_y)  
+
+
+
+
 
 
 
@@ -528,16 +842,34 @@ def showScreen():
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     glLoadIdentity()
     iterate()
-    drawSpaceship()  # Draw the spaceship
-    draw_missiles()  # Draw missiles
-    draw_falling_circles()  # Draw falling circles
-    draw_special_circle()  # Draw special circle
-    draw_power_up_agent()  # Draw the power-up agent
-    draw_boost_up_agent()  # Draw the Boost-Up Agent
-    draw_bomb()  # Draw the bomb
-    draw_heart(heart[0], heart[1])  # Draw the Heart (+)
-    draw_skull(skull[0], skull[1])  # Draw the Skull (-)
+    
+    if over:
+        glColor3f(1, 0, 0)  # Red color for "Game Over" text
+        glRasterPos2f(200, 250)
+        GameOver()
+        draw_restart_button()
+    else:
+        # Draw game elements
+        draw_restart_button()
+        drawSpaceship()  # Draw the spaceship
+        draw_missiles()  # Draw missiles
+        draw_falling_circles()  # Draw falling circles
+        draw_special_circle()  # Draw special circle
+        draw_power_up_agent()  # Draw the power-up agent
+        draw_boost_up_agent()  # Draw the Boost-Up Agent
+        draw_bomb()  # Draw the bomb
+        draw_heart(heart[0], heart[1])  # Draw the Heart (+)
+        draw_skull(skull[0], skull[1])  # Draw the Skull (-)
+
+        # Display health (heart) and score with a cool gradient color
+        health_color = (1.0, 0.4, 0.4)  # Soft red for health
+        score_color = (0.4, 1.0, 0.6)  # Soft green for score
+        draw_text(400, 470, f"Health: {spaceship_health}", color=health_color)
+        draw_text(400, 440, f"Score: {score}", color=score_color)
+
     glutSwapBuffers()
+
+
 
 # Initialize GLUT and start the main loop
 glutInit()
@@ -547,5 +879,7 @@ glutInitWindowPosition(0, 0)
 wind = glutCreateWindow(b"Spaceship Game with Power-Up Agent")
 glutDisplayFunc(showScreen)
 glutIdleFunc(animation)
+glutMouseFunc(mouse_listener)
 glutKeyboardFunc(KeyboardListener)
+glutKeyboardUpFunc(KeyboardUpListener)
 glutMainLoop()
