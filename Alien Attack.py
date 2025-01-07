@@ -364,7 +364,8 @@ def draw_missiles():
                 print(f"Score: {score}")
                 falling_circles.remove(circle)
                 falling_circles.append([random.randint(100, 400), 480])
-                projectiles.remove(missile)
+                if not power_up_active:
+                    projectiles.remove(missile)
                 break
 
         # Collision detection with the special circle
@@ -377,7 +378,8 @@ def draw_missiles():
             special_circle[0] = random.randint(100, 400)
             special_circle[1] = 480
             special_circle[2] = 10
-            projectiles.remove(missile)
+            if not power_up_active:
+                projectiles.remove(missile)
 
         # Only move missiles if the game is not paused
         if not pause:
@@ -477,9 +479,9 @@ def animation():
 
     # Handle spaceship movement
     if left_pressed and spaceshipX > 20:
-        spaceshipX -= 3
+        spaceshipX -= 5
     if right_pressed and spaceshipX < 480:
-        spaceshipX += 3
+        spaceshipX += 5
 
     # Move falling circles downward
     for circle in falling_circles:
@@ -627,13 +629,6 @@ def KeyboardUpListener(key, x, y):
 
 
 
-
-
-
-
-
-
-
 def drawpoints(x,y,size = 2):
     glPointSize(size)
     glBegin(GL_POINTS)
@@ -661,7 +656,7 @@ def FindZone(x0,y0,x1,y1):
         elif dx<0 and dy>0:
             zone=2
         elif dx<0 and dy<0:
-            zone=5 
+            zone=5
         else:
             zone=6
     return zone
@@ -686,7 +681,7 @@ def convert_to_zone0(original_zone,x,y) :
         return -y,x
     elif (original_zone == 7) :
         return x,-y
-    
+
 
 def convert_to_originalzone(originalzone,x,y):
     if originalzone == 0:
@@ -728,14 +723,14 @@ def MidpointLine(zone,x0,y0,x1,y1):
 
 
 def PlotCirclePoints(xc, yc, x, y):
-    drawpoints(xc + x, yc + y)  
-    drawpoints(xc - x, yc + y) 
-    drawpoints(xc + x, yc - y)  
-    drawpoints(xc - x, yc - y)  
-    drawpoints(xc + y, yc + x)  
-    drawpoints(xc - y, yc + x)  
-    drawpoints(xc + y, yc - x)  
-    drawpoints(xc - y, yc - x) 
+    drawpoints(xc + x, yc + y)
+    drawpoints(xc - x, yc + y)
+    drawpoints(xc + x, yc - y)
+    drawpoints(xc - x, yc - y)
+    drawpoints(xc + y, yc + x)
+    drawpoints(xc - y, yc + x)
+    drawpoints(xc + y, yc - x)
+    drawpoints(xc - y, yc - x)
 
 
 def MidpointCircle(r,xc,yc):
@@ -776,51 +771,51 @@ def GameOver():
     text_offset_y = -25   # Adjust to vertically center the text
 
     # G
-    Eight_way_symmetry(center_x + text_offset_x, center_y + text_offset_y + 40, center_x + text_offset_x + 30, center_y + text_offset_y + 40)  
-    Eight_way_symmetry(center_x + text_offset_x, center_y + text_offset_y + 40, center_x + text_offset_x, center_y + text_offset_y)  
-    Eight_way_symmetry(center_x + text_offset_x, center_y + text_offset_y, center_x + text_offset_x + 30, center_y + text_offset_y)  
-    Eight_way_symmetry(center_x + text_offset_x + 30, center_y + text_offset_y, center_x + text_offset_x + 30, center_y + text_offset_y + 20)  
-    Eight_way_symmetry(center_x + text_offset_x + 20, center_y + text_offset_y + 20, center_x + text_offset_x + 30, center_y + text_offset_y + 20)  
+    Eight_way_symmetry(center_x + text_offset_x, center_y + text_offset_y + 40, center_x + text_offset_x + 30, center_y + text_offset_y + 40)
+    Eight_way_symmetry(center_x + text_offset_x, center_y + text_offset_y + 40, center_x + text_offset_x, center_y + text_offset_y)
+    Eight_way_symmetry(center_x + text_offset_x, center_y + text_offset_y, center_x + text_offset_x + 30, center_y + text_offset_y)
+    Eight_way_symmetry(center_x + text_offset_x + 30, center_y + text_offset_y, center_x + text_offset_x + 30, center_y + text_offset_y + 20)
+    Eight_way_symmetry(center_x + text_offset_x + 20, center_y + text_offset_y + 20, center_x + text_offset_x + 30, center_y + text_offset_y + 20)
 
     # A
-    Eight_way_symmetry(center_x + text_offset_x + 40, center_y + text_offset_y, center_x + text_offset_x + 50, center_y + text_offset_y + 40)  
-    Eight_way_symmetry(center_x + text_offset_x + 50, center_y + text_offset_y + 40, center_x + text_offset_x + 60, center_y + text_offset_y)  
-    Eight_way_symmetry(center_x + text_offset_x + 45, center_y + text_offset_y + 20, center_x + text_offset_x + 55, center_y + text_offset_y + 20)  
+    Eight_way_symmetry(center_x + text_offset_x + 40, center_y + text_offset_y, center_x + text_offset_x + 50, center_y + text_offset_y + 40)
+    Eight_way_symmetry(center_x + text_offset_x + 50, center_y + text_offset_y + 40, center_x + text_offset_x + 60, center_y + text_offset_y)
+    Eight_way_symmetry(center_x + text_offset_x + 45, center_y + text_offset_y + 20, center_x + text_offset_x + 55, center_y + text_offset_y + 20)
 
     # M
-    Eight_way_symmetry(center_x + text_offset_x + 70, center_y + text_offset_y, center_x + text_offset_x + 70, center_y + text_offset_y + 40)  
-    Eight_way_symmetry(center_x + text_offset_x + 70, center_y + text_offset_y + 40, center_x + text_offset_x + 80, center_y + text_offset_y + 20)  
-    Eight_way_symmetry(center_x + text_offset_x + 80, center_y + text_offset_y + 20, center_x + text_offset_x + 90, center_y + text_offset_y + 40)  
-    Eight_way_symmetry(center_x + text_offset_x + 90, center_y + text_offset_y + 40, center_x + text_offset_x + 90, center_y + text_offset_y)  
+    Eight_way_symmetry(center_x + text_offset_x + 70, center_y + text_offset_y, center_x + text_offset_x + 70, center_y + text_offset_y + 40)
+    Eight_way_symmetry(center_x + text_offset_x + 70, center_y + text_offset_y + 40, center_x + text_offset_x + 80, center_y + text_offset_y + 20)
+    Eight_way_symmetry(center_x + text_offset_x + 80, center_y + text_offset_y + 20, center_x + text_offset_x + 90, center_y + text_offset_y + 40)
+    Eight_way_symmetry(center_x + text_offset_x + 90, center_y + text_offset_y + 40, center_x + text_offset_x + 90, center_y + text_offset_y)
 
     # E
-    Eight_way_symmetry(center_x + text_offset_x + 100, center_y + text_offset_y, center_x + text_offset_x + 100, center_y + text_offset_y + 40)  
-    Eight_way_symmetry(center_x + text_offset_x + 100, center_y + text_offset_y + 40, center_x + text_offset_x + 110, center_y + text_offset_y + 40)  
-    Eight_way_symmetry(center_x + text_offset_x + 100, center_y + text_offset_y + 20, center_x + text_offset_x + 110, center_y + text_offset_y + 20) 
-    Eight_way_symmetry(center_x + text_offset_x + 100, center_y + text_offset_y, center_x + text_offset_x + 110, center_y + text_offset_y)  
+    Eight_way_symmetry(center_x + text_offset_x + 100, center_y + text_offset_y, center_x + text_offset_x + 100, center_y + text_offset_y + 40)
+    Eight_way_symmetry(center_x + text_offset_x + 100, center_y + text_offset_y + 40, center_x + text_offset_x + 110, center_y + text_offset_y + 40)
+    Eight_way_symmetry(center_x + text_offset_x + 100, center_y + text_offset_y + 20, center_x + text_offset_x + 110, center_y + text_offset_y + 20)
+    Eight_way_symmetry(center_x + text_offset_x + 100, center_y + text_offset_y, center_x + text_offset_x + 110, center_y + text_offset_y)
 
     # O
-    Eight_way_symmetry(center_x + text_offset_x + 120, center_y + text_offset_y, center_x + text_offset_x + 120, center_y + text_offset_y + 40)  
-    Eight_way_symmetry(center_x + text_offset_x + 140, center_y + text_offset_y, center_x + text_offset_x + 140, center_y + text_offset_y + 40)  
-    Eight_way_symmetry(center_x + text_offset_x + 120, center_y + text_offset_y + 40, center_x + text_offset_x + 140, center_y + text_offset_y + 40)  
-    Eight_way_symmetry(center_x + text_offset_x + 120, center_y + text_offset_y, center_x + text_offset_x + 140, center_y + text_offset_y)  
+    Eight_way_symmetry(center_x + text_offset_x + 120, center_y + text_offset_y, center_x + text_offset_x + 120, center_y + text_offset_y + 40)
+    Eight_way_symmetry(center_x + text_offset_x + 140, center_y + text_offset_y, center_x + text_offset_x + 140, center_y + text_offset_y + 40)
+    Eight_way_symmetry(center_x + text_offset_x + 120, center_y + text_offset_y + 40, center_x + text_offset_x + 140, center_y + text_offset_y + 40)
+    Eight_way_symmetry(center_x + text_offset_x + 120, center_y + text_offset_y, center_x + text_offset_x + 140, center_y + text_offset_y)
 
     # V
-    Eight_way_symmetry(center_x + text_offset_x + 150, center_y + text_offset_y + 40, center_x + text_offset_x + 160, center_y + text_offset_y)  
-    Eight_way_symmetry(center_x + text_offset_x + 160, center_y + text_offset_y, center_x + text_offset_x + 170, center_y + text_offset_y + 40)  
+    Eight_way_symmetry(center_x + text_offset_x + 150, center_y + text_offset_y + 40, center_x + text_offset_x + 160, center_y + text_offset_y)
+    Eight_way_symmetry(center_x + text_offset_x + 160, center_y + text_offset_y, center_x + text_offset_x + 170, center_y + text_offset_y + 40)
 
     # E
-    Eight_way_symmetry(center_x + text_offset_x + 180, center_y + text_offset_y, center_x + text_offset_x + 180, center_y + text_offset_y + 40)  
-    Eight_way_symmetry(center_x + text_offset_x + 180, center_y + text_offset_y + 40, center_x + text_offset_x + 190, center_y + text_offset_y + 40)  
-    Eight_way_symmetry(center_x + text_offset_x + 180, center_y + text_offset_y + 20, center_x + text_offset_x + 190, center_y + text_offset_y + 20)  
-    Eight_way_symmetry(center_x + text_offset_x + 180, center_y + text_offset_y, center_x + text_offset_x + 190, center_y + text_offset_y)  
+    Eight_way_symmetry(center_x + text_offset_x + 180, center_y + text_offset_y, center_x + text_offset_x + 180, center_y + text_offset_y + 40)
+    Eight_way_symmetry(center_x + text_offset_x + 180, center_y + text_offset_y + 40, center_x + text_offset_x + 190, center_y + text_offset_y + 40)
+    Eight_way_symmetry(center_x + text_offset_x + 180, center_y + text_offset_y + 20, center_x + text_offset_x + 190, center_y + text_offset_y + 20)
+    Eight_way_symmetry(center_x + text_offset_x + 180, center_y + text_offset_y, center_x + text_offset_x + 190, center_y + text_offset_y)
 
     # R
-    Eight_way_symmetry(center_x + text_offset_x + 200, center_y + text_offset_y, center_x + text_offset_x + 200, center_y + text_offset_y + 40)  
-    Eight_way_symmetry(center_x + text_offset_x + 200, center_y + text_offset_y + 40, center_x + text_offset_x + 210, center_y + text_offset_y + 40)  
-    Eight_way_symmetry(center_x + text_offset_x + 210, center_y + text_offset_y + 40, center_x + text_offset_x + 210, center_y + text_offset_y + 20)  
-    Eight_way_symmetry(center_x + text_offset_x + 200, center_y + text_offset_y + 20, center_x + text_offset_x + 210, center_y + text_offset_y + 20)  
-    Eight_way_symmetry(center_x + text_offset_x + 200, center_y + text_offset_y + 20, center_x + text_offset_x + 211, center_y + text_offset_y)  
+    Eight_way_symmetry(center_x + text_offset_x + 200, center_y + text_offset_y, center_x + text_offset_x + 200, center_y + text_offset_y + 40)
+    Eight_way_symmetry(center_x + text_offset_x + 200, center_y + text_offset_y + 40, center_x + text_offset_x + 210, center_y + text_offset_y + 40)
+    Eight_way_symmetry(center_x + text_offset_x + 210, center_y + text_offset_y + 40, center_x + text_offset_x + 210, center_y + text_offset_y + 20)
+    Eight_way_symmetry(center_x + text_offset_x + 200, center_y + text_offset_y + 20, center_x + text_offset_x + 210, center_y + text_offset_y + 20)
+    Eight_way_symmetry(center_x + text_offset_x + 200, center_y + text_offset_y + 20, center_x + text_offset_x + 211, center_y + text_offset_y)
 
 
 
@@ -842,7 +837,7 @@ def showScreen():
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     glLoadIdentity()
     iterate()
-    
+
     if over:
         glColor3f(1, 0, 0)  # Red color for "Game Over" text
         glRasterPos2f(200, 250)
