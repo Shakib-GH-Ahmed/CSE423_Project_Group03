@@ -457,9 +457,6 @@ def draw_special_circle():
 
 
 
-
-
-
 def draw_text(x, y, text, color=(0.5, 0.5, 1.0)):
     glColor3f(*color)  # Set text color
     glRasterPos2f(x, y)  # Set position
@@ -506,13 +503,6 @@ def animation():
     update_boost_up_agent()
 
     glutPostRedisplay()
-
-
-
-
-
-
-
 
 
 
@@ -567,8 +557,6 @@ def mouse_listener(button, state, x, y):
 
 
 
-
-
 def KeyboardListener(key, x, y):
     global spaceshipX, left_pressed, right_pressed, projectiles, boost_up_active, over, pause, fire_rate_timer
 
@@ -611,19 +599,6 @@ def KeyboardUpListener(key, x, y):
         left_pressed = False
     elif key == b'd':  # Stop moving right
         right_pressed = False
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -816,9 +791,6 @@ def GameOver():
     Eight_way_symmetry(center_x + text_offset_x + 210, center_y + text_offset_y + 40, center_x + text_offset_x + 210, center_y + text_offset_y + 20)
     Eight_way_symmetry(center_x + text_offset_x + 200, center_y + text_offset_y + 20, center_x + text_offset_x + 210, center_y + text_offset_y + 20)
     Eight_way_symmetry(center_x + text_offset_x + 200, center_y + text_offset_y + 20, center_x + text_offset_x + 211, center_y + text_offset_y)
-
-
-
 
 
 
